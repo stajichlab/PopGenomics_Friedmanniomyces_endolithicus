@@ -1,8 +1,41 @@
 Populations:
 
   All:
-    - Sample_Example_1
+    - CCFEE_5001
+    - CCFEE_5180
+    - CCFEE_5193
+    - CCFEE_5195
+    - CCFEE_5199
+    - CCFEE_5200
+    - CCFEE_5208
+    - CCFEE_522
+    - CCFEE_524
+    - CCFEE_5269
+    - CCFEE_5273
+    - CCFEE_5275
+    - CCFEE_5277
+    - CCFEE_5281
+    - CCFEE_5283
+    - CCFEE_5305
+    - CCFEE_5307
+    - CCFEE_5311
+    - CCFEE_5311_v1
+    - CCFEE_5328
+    - CCFEE_5486
+    - CCFEE_6074
+    - CCFEE_6078
+    - CCFEE_6081
+    - CCFEE_6096
+    - CCFEE_6162
+    - CCFEE_6249
+    - CCFEE_6250
+    - CCFEE_6296
+    - CCFEE_6306
+    - CCFEE_6416
+    - CCFEE_6464
+    - CCFEE_670
 
-  PopA:
-    - Sample_Example_1
-    - Sample_Example_2
+  CCFEE_5311:
+    - CCFEE_5311
+    - CCFEE_5311_v1
+
