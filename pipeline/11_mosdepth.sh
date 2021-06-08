@@ -11,7 +11,7 @@ module load mosdepth
 mkdir -p coverage/mosdepth
 source config.txt
 
-for WINDOW in 5000 10000 50000
+for WINDOW in 10000 50000
 do
 	parallel --jobs $CPU mosdepth -f $REFGENOME -T 1,10,50,100,200 -n --by $WINDOW -t 2 "{= s:$ALNFOLDER\/:coverage/mosdepth/:; s:\.$HTCEXT:.${WINDOW}bp: =}" {} ::: $ALNFOLDER/*.$HTCEXT
 done
