@@ -9,7 +9,6 @@ CPU=2
 if [ $SLURM_CPUS_ON_NODE ]; then
   CPU=$SLURM_CPUS_ON_NODE
 fi
-TEMP=/scratch
 
 if [[ -f config.txt ]]; then
   source config.txt
@@ -28,31 +27,21 @@ if [[ -z $POPYAML || ! -s $POPYAML ]]; then
 fi
 
 module load parallel
-module load bcftools/1.12
-module load samtools/1.12
-module load IQ-TREE/2.1.3
+module load bcftools
+module load samtools
+module load iqtree
 module load fasttree
-declare -x TEMPDIR=$TEMP/$USER/$$
-
-cleanup() {
-	#echo "rm temp is: $TEMPDIR"
-	rm -rf $TEMPDIR
-}
-
-# Set trap to ensure cleanupis stopped
-trap "cleanup; rm -rf $TEMPDIR; exit" SIGHUP SIGINT SIGTERM EXIT
-
-mkdir -p $TEMPDIR
+module load workspace/scratch
 
 print_fas() {
-  printf ">%s\n%s\n" $1 $(bcftools view -e 'QUAL < 1000 || AF=1' $2 | bcftools query -e 'INFO/AF < 0.1' -s $1 -f '[%TGT]')
+  printf ">%s\n%s\n" $1 $(bcftools query -s $1 -f '[%IUPACGT]' $2)
 }
 
 iqtreerun() {
 	in=$1
 	out=$in.treefile
 	if [[ ! -f $out || $in -nt $out ]]; then
-		sbatch -p intel -n 6 -N 1 --mem 16gb -J iqtree --wrap "module load IQ-TREE/2.1.1; iqtree2 -m GTR+ASC -s $in -nt AUTO -bb 1000 -alrt 1000"
+		sbatch -p intel -n 6 -N 1 --mem 16gb -J iqtree --wrap "module load IQ-TREE/2.1.1; iqtree2 -m GTR+ASC -s $in -st DNA -nt AUTO -bb 1000 -alrt 1000"
 	fi
 }
 
@@ -66,7 +55,7 @@ fasttreerun() {
 
 export -f print_fas fasttreerun iqtreerun
 mkdir -p $TREEDIR
-for POPNAME in $(yq eval '.Populations | keys' $POPYAML | perl -p -e 's/^\s*\-\s*//')
+for POPNAME in $(yq eval '.Populations | keys' $POPYAML | perl -p -e 's/^\s*\-\s*//' )
 do
   for TYPE in SNP
   do
@@ -80,16 +69,15 @@ do
 
     vcf=$root.vcf.gz
     if [[ ! -f $FAS || ${vcf} -nt $FAS ]]; then
-      rm -f $FAS
-      vcftmp=$TEMPDIR/$PREFIX.$POPNAME.$TYPE.combined_selected.vcf.gz
-      rsync -a $vcf $vcftmp
-      rsync -a $vcf.tbi $vcftmp.tbi
+      vcftemp=$SCRATCH/$PREFIX.$POPNAME.$TYPE.vcf.gz
+      bcftools filter -Oz -o $vcftemp --SnpGap 3 -e 'QUAL < 1000 || AF=1 || INFO/AF < 0.05 || F_MISSING > 0' $vcf
+      bcftools index $vcftemp
       # no ref genome alleles
-      #printf ">%s\n%s\n" $REFNAME $(bcftools view -e 'AF=1' ${vcf} | bcftools query -e 'INFO/AF < 0.1' -f '%REF') > $FAS
-      parallel -j $CPU print_fas ::: $(bcftools query -l ${vcf}) ::: $vcftmp >> $FAS
-      perl -ip -e 'if(/^>/){s/[\(\)#]/_/g; s/_+/_/g } else {s/[\*.]/-/g }' $FAS
+      printf ">%s\n%s\n" $REFNAME $(bcftools query -f '%REF' $vcftemp) > $FAS
+      parallel -j $CPU print_fas ::: $(bcftools query -l ${vcf}) ::: $vcftemp >> $FAS
+#      perl -ip -e 'if(/^>/){s/[\(\)#]/_/g; s/_+/_/g } else {s/[\*.]/-/g }' $FAS
     fi
   done
 done
-parallel -j 2 fasttreerun ::: $(ls $TREEDIR/*.mfa)
-parallel -j 4 iqtreerun ::: $(ls $TREEDIR/*.mfa)
+#parallel -j 2 fasttreerun ::: $(ls $TREEDIR/*.mfa)
+#parallel -j 4 iqtreerun ::: $(ls $TREEDIR/*.mfa)
